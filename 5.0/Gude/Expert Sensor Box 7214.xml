@@ -1,0 +1,338 @@
+<zabbix_export>
+    <version>5.0</version>
+
+    <templates>
+        <template>
+            <template>Template GUDE Expert Sensor Box 7214</template>
+            <name>Template GUDE Expert Sensor Box 7214</name>
+            <description>Template for GUDE Expert Sensor Box 7214-Series
+- SNMP
+
+Can be used to monitor:
+- Temperature, humidity, dew point &amp; air pressure of environment</description>
+
+            <groups>
+                <group>
+                    <name>Templates</name>
+                </group>
+            </groups>
+
+			<!-- Applications -->
+            <applications>
+                <application>
+                    <name>General</name>
+                </application>
+                <application>
+                    <name>Temperature</name>
+                </application>
+                <application>
+                    <name>Humidity</name>
+                </application>
+                <application>
+                    <name>Other</name>
+                </application>
+            </applications>
+
+			<!-- Macros -->
+            <macros>
+                <macro>
+                    <macro>{$TEMP.HIGH}</macro>
+                    <value>28</value>
+                </macro>
+                <macro>
+                    <macro>{$TEMP.LOW}</macro>
+                    <value>25</value>
+                </macro>
+                <macro>
+                    <macro>{$HUM.HIGH}</macro>
+                    <value>70</value>
+                </macro>
+                <macro>
+                    <macro>{$HUM.LOW}</macro>
+                    <value>20</value>
+                </macro>
+            </macros>
+
+            <!-- Static items -->
+            <items>
+                <item>
+                    <name>System hostname</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.2.1.1.5.0</snmp_oid>
+                    <key>gude.system.hostname</key>
+                    <delay>5m</delay>
+                    <value_type>TEXT</value_type>
+                    <description>Device hostname</description>
+                    <applications>
+                        <application>
+                            <name>General</name>
+                        </application>
+                    </applications>
+                </item>
+                <item>
+                    <name>System model</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.2.1.1.1.0</snmp_oid>
+                    <key>gude.system.model</key>
+                    <delay>5m</delay>
+                    <value_type>TEXT</value_type>
+                    <description>Device model</description>
+                    <applications>
+                        <application>
+                            <name>General</name>
+                        </application>
+                    </applications>
+                </item>
+                <item>
+                    <name>Interface MAC address</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.2.1.2.2.1.6.1</snmp_oid>
+                    <key>gude.if.mac</key>
+                    <delay>5m</delay>
+                    <value_type>TEXT</value_type>
+                    <description>Device network interface MAC address</description>
+                    <applications>
+                        <application>
+                            <name>General</name>
+                        </application>
+                    </applications>
+					<preprocessing>
+						<step>
+							<type>JAVASCRIPT</type>
+							<params>
+								var parts = value.split(':');
+								for (var i = 0; i < parts.length; i++) {
+									if (parts[i].length === 1) {
+										parts[i] = '0' + parts[i];
+									}
+								}
+								return parts.join(':').toUpperCase();
+							</params>
+						</step>
+					</preprocessing>
+                </item>
+            </items>
+			
+            <!-- SNMP Discovery Rule for GUDE Probes -->
+            <discovery_rules>
+				<!-- Temperature -->
+                <discovery_rule>
+                    <name>Discover GUDE Temperature Probes</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>discovery[{#SNMPVALUE},1.3.6.1.4.1.28507.67.1.6.1.1.2]</snmp_oid>
+                    <key>gude.probes.tmp.discovery</key>
+                    <delay>5m</delay>
+
+					<!-- Items -->
+                    <item_prototypes>
+                        <item_prototype>
+                            <name>Probe {#SNMPINDEX}: Temperature</name>
+                            <type>SNMP_AGENT</type>
+                            <snmp_oid>1.3.6.1.4.1.28507.67.1.6.1.1.2.{#SNMPINDEX}</snmp_oid>
+                            <key>gude.probe.temperature[{#SNMPINDEX}]</key>
+							<delay>5m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>°C</units>
+                            <applications>
+                                <application>
+                                    <name>Temperature</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>MULTIPLIER</type>
+                                    <params>0.1</params>
+                                </step>
+                            </preprocessing>
+                        </item_prototype>
+                    </item_prototypes>
+
+					<!-- Triggers -->
+                    <trigger_prototypes>
+					    <trigger_prototype>
+                            <expression>{Template GUDE Expert Sensor Box 7214:gude.probe.temperature[{#SNMPINDEX}].avg(3)}&gt;{$TEMP.HIGH}</expression>
+							<recovery_mode>RECOVERY_EXPRESSION</recovery_mode>
+							<recovery_expression>{Template GUDE Expert Sensor Box 7214:gude.probe.temperature[{#SNMPINDEX}].avg(3)}&lt;{$TEMP.LOW}</recovery_expression>
+                            <name>Sensor {#SNMPINDEX}: High temperature {ITEM.VALUE} on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+							<manual_close>YES</manual_close>
+						</trigger_prototype>
+                    </trigger_prototypes>
+					
+					<!-- Graphs -->
+					<graph_prototypes>
+                        <graph_prototype>
+                            <name>Sensor {#SNMPINDEX}: Temperature</name>
+                            <graph_items>
+                                <graph_item>
+                                    <color>FF0000</color>
+                                    <item>
+										<host>Template GUDE Expert Sensor Box 7214</host>
+                                        <key>gude.probe.temperature[{#SNMPINDEX}]</key>
+                                    </item>
+                                </graph_item>
+                            </graph_items>
+                        </graph_prototype>
+                    </graph_prototypes>
+                </discovery_rule>
+				
+				<!-- Humidity -->
+                <discovery_rule>
+                    <name>Discover GUDE Humidity Probes</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>discovery[{#SNMPVALUE},1.3.6.1.4.1.28507.67.1.6.1.1.3]</snmp_oid>
+                    <key>gude.probes.hum.discovery</key>
+                    <delay>5m</delay>
+
+					<!-- Items -->
+					<item_prototypes>
+                        <item_prototype>
+                            <name>Probe {#SNMPINDEX}: Humidity</name>
+                            <type>SNMP_AGENT</type>
+                            <snmp_oid>1.3.6.1.4.1.28507.67.1.6.1.1.3.{#SNMPINDEX}</snmp_oid>
+                            <key>gude.probe.humidity[{#SNMPINDEX}]</key>
+							<delay>5m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <applications>
+                                <application>
+                                    <name>Humidity</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>MULTIPLIER</type>
+                                    <params>0.1</params>
+                                </step>
+                            </preprocessing>
+                        </item_prototype>
+                    </item_prototypes>
+
+					<!-- Triggers -->
+                    <trigger_prototypes>
+                        <trigger_prototype>
+                            <expression>{Template GUDE Expert Sensor Box 7214:gude.probe.humidity[{#SNMPINDEX}].last()}&gt;{$HUM.HIGH}</expression>
+                            <name>Sensor {#SNMPINDEX}: High humidity {ITEM.VALUE} on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+							<manual_close>YES</manual_close>
+                        </trigger_prototype>
+                        <trigger_prototype>
+                            <expression>{Template GUDE Expert Sensor Box 7214:gude.probe.humidity[{#SNMPINDEX}].last()}&lt;{$HUM.LOW}</expression>
+                            <name>Sensor {#SNMPINDEX}: Low humidity {ITEM.VALUE} on {HOST.NAME}</name>
+                            <priority>WARNING</priority>
+							<manual_close>YES</manual_close>
+                        </trigger_prototype>
+                    </trigger_prototypes>
+
+					<!-- Graphs -->
+					<graph_prototypes>
+                        <graph_prototype>
+                            <name>Sensor {#SNMPINDEX}: Humidity</name>
+                            <graph_items>
+                                <graph_item>
+                                    <color>00FF00</color>
+                                    <item>
+										<host>Template GUDE Expert Sensor Box 7214</host>
+                                        <key>gude.probe.humidity[{#SNMPINDEX}]</key>
+                                    </item>
+                                </graph_item>
+                            </graph_items>
+                        </graph_prototype>
+                    </graph_prototypes>
+                </discovery_rule>
+
+				<!-- Dew Point -->
+                <discovery_rule>
+                    <name>Discover GUDE Dew Point Probes</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>discovery[{#SNMPVALUE},1.3.6.1.4.1.28507.67.1.6.1.1.6]</snmp_oid>
+                    <key>gude.probes.dew.discovery</key>
+                    <delay>5m</delay>
+
+					<!-- Items -->
+					<item_prototypes>
+                        <item_prototype>
+                            <name>Probe {#SNMPINDEX}: Dew Point</name>
+                            <type>SNMP_AGENT</type>
+                            <snmp_oid>1.3.6.1.4.1.28507.67.1.6.1.1.6.{#SNMPINDEX}</snmp_oid>
+                            <key>gude.probe.dewpoint[{#SNMPINDEX}]</key>
+							<delay>5m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>°C</units>
+							<applications>
+                                <application>
+                                    <name>Other</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>MULTIPLIER</type>
+                                    <params>0.1</params>
+                                </step>
+                            </preprocessing>
+                        </item_prototype>
+                    </item_prototypes>
+
+					<!-- Graphs -->
+					<graph_prototypes>
+                        <graph_prototype>
+                            <name>Sensor {#SNMPINDEX}: Dew Point</name>
+                            <graph_items>
+                                <graph_item>
+                                    <color>0000FF</color>
+                                    <item>
+										<host>Template GUDE Expert Sensor Box 7214</host>
+                                        <key>gude.probe.dewpoint[{#SNMPINDEX}]</key>
+                                    </item>
+                                </graph_item>
+                            </graph_items>
+                        </graph_prototype>
+                    </graph_prototypes>
+                </discovery_rule>
+
+				<!-- Air Pressure -->
+                <discovery_rule>
+                    <name>Discover GUDE Air Pressure Probes</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>discovery[{#SNMPVALUE},1.3.6.1.4.1.28507.67.1.6.1.1.5]</snmp_oid>
+                    <key>gude.probes.apr.discovery</key>
+                    <delay>5m</delay>
+
+					<!-- Items -->
+					<item_prototypes>
+                        <item_prototype>
+                            <name>Probe {#SNMPINDEX}: Air Pressure</name>
+                            <type>SNMP_AGENT</type>
+                            <snmp_oid>1.3.6.1.4.1.28507.67.1.6.1.1.5.{#SNMPINDEX}</snmp_oid>
+                            <key>gude.probe.airpressure[{#SNMPINDEX}]</key>
+							<delay>5m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>hPa!</units>
+							<applications>
+                                <application>
+                                    <name>Other</name>
+                                </application>
+                            </applications>
+                        </item_prototype>
+                    </item_prototypes>
+
+					<!-- Graphs -->
+					<graph_prototypes>
+                        <graph_prototype>
+                            <name>Sensor {#SNMPINDEX}: Air Pressure</name>
+                            <graph_items>
+                                <graph_item>
+                                    <color>FFF000</color>
+                                    <item>
+										<host>Template GUDE Expert Sensor Box 7214</host>
+                                        <key>gude.probe.airpressure[{#SNMPINDEX}]</key>
+                                    </item>
+                                </graph_item>
+                            </graph_items>
+                        </graph_prototype>
+                    </graph_prototypes>
+                </discovery_rule>
+            </discovery_rules>
+        </template>
+    </templates>
+</zabbix_export>
